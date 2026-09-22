@@ -45,5 +45,3 @@ function createQuiz(req, res) {
 
 // Esporto le 2 funzioni così il file delle rotte (quizz.routes.js) può usarle
 module.exports = { getQuizzes, createQuiz };
-
-module.exports = router;
