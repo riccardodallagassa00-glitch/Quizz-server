@@ -12,12 +12,12 @@ let quizzes = [
 let prossimoId = 2;
 
 // Funzione chiamata quando arriva una richiesta GET /api/quizz
-function getQuizzes(req, res) {
+function getQuizz(req, res) {
   res.json(quizzes); // rispondo con l'intero array dei quiz, in formato JSON
 }
 
 // Funzione chiamata quando arriva una richiesta POST /api/quizz
-function createQuiz(req, res) {
+function createQuizz(req, res) {
   // estraggo i 3 campi necessari dal corpo della richiesta inviata dal client
   const { domanda, risposte, rispostaCorretta } = req.body;
 
@@ -40,8 +40,8 @@ function createQuiz(req, res) {
   quizzes.push(nuovoQuiz);
 
   // status 201 = creazione avvenuta con successo
-  res.status(201).json(nuovoQuiz); // rispondo con il quiz appena creato
+  res.status(201).json({ message: "Created" }); // rispondo con il quiz appena creato
 }
 
 // Esporto le 2 funzioni così il file delle rotte (quizz.routes.js) può usarle
-module.exports = { getQuizzes, createQuiz };
+module.exports = { getQuizz, createQuizz };

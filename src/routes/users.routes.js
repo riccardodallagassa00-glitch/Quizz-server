@@ -10,6 +10,9 @@ const router = Router();
 // Quando arriva una richiesta GET all'indirizzo /users, esegui la funzione getUsers del controller
 router.get("/users", usersController.getUsers);
 
+// GET /user/:id -> un singolo utente specifico, identificato tramite path param
+router.get("/user/:id", usersController.getUser);
+
 // Quando arriva una richiesta POST all'indirizzo /user, esegui la funzione createUser
 router.post("/user", usersController.createUser);
 

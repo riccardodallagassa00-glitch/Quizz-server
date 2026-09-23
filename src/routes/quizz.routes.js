@@ -8,10 +8,10 @@ const quizzController = require("../controllers/quizz.controller.js");
 const router = Router();
 
 // Quando arriva una richiesta GET all'indirizzo /quizz, esegui la funzione getQuizzes del controller
-router.get("/quizz", quizzController.getQuizzes);
+router.get("/quizz", quizzController.getQuizz);
 
 // Quando arriva una richiesta POST all'indirizzo /quizz, esegui la funzione createQuiz
-router.post("/quizz", quizzController.createQuiz);
+router.post("/quizz", quizzController.createQuizz);
 
 // Esporto il router così main.js può "montarlo" e attivare queste rotte
 module.exports = router;

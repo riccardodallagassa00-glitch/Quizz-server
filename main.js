@@ -7,6 +7,9 @@ const usersRoutes = require("./src/routes/users.routes.js");
 // Importo il router con tutte le rotte relative ai quiz
 const quizzRoutes = require("./src/routes/quizz.routes.js");
 
+const dotenv = require("dotenv");
+const result = dotenv.config();
+
 // Racchiudo tutta la logica di avvio dentro una funzione chiamata "main"
 function main() {
   // Creo l'applicazione Express: da qui in poi "app" rappresenta il mio server
