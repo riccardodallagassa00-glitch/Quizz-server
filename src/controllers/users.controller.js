@@ -45,10 +45,22 @@ function getUsers(req, res) {
 function getUser(req, res) {
   // req.params contiene i parametri presenti nell'indirizzo (l'id nella rotta /user/:id)
   // parseInt converte il testo (es. "3") in un numero vero (3), perché nell'array l'id è un numero
-  const id = parseInt(req.params.id, 10);
+  const id = req.params.id;
+
+  if (!id.trim()) {
+    return res.status(400).json({ errore: "ID mancante nella richiesta" });
+  }
+
+  console.log("ID ricevuto:", typeof id);
+
+  if (typeof Number(id) !== "number") {
+    return res
+      .status(400)
+      .json({ errore: "ID non valido. Deve essere un numero." });
+  }
 
   // cerco nell'array l'utente con quell'id
-  const user = users.find((u) => u.id === id);
+  const user = users.find((u) => u.id == id);
 
   // se find() non trova nulla, restituisce undefined: qui lo controllo
   if (!user) {
