@@ -10,8 +10,12 @@ const quizzRoutes = require("./src/routes/quizz.routes.js");
 const dotenv = require("dotenv");
 const result = dotenv.config();
 
+// Importo la connessione al database configurata in src/config/database.js
+const pool = require("./src/config/db.js");
+
 // Racchiudo tutta la logica di avvio dentro una funzione chiamata "main"
-function main() {
+// Diventa "async" perché al suo interno useremo "await" per aspettare la connessione al database
+async function main() {
   // Creo l'applicazione Express: da qui in poi "app" rappresenta il mio server
   const app = express();
 
@@ -37,6 +41,16 @@ function main() {
   app.use((req, res) => {
     res.status(404).json({ errore: "Rotta non trovata" });
   });
+
+  try {
+    // Provo una query banalissima per verificare che il database risponda
+    await pool.query("SELECT 1");
+    console.log("Connessione al database riuscita.");
+  } catch (errore) {
+    // Se la connessione fallisce (es. DATABASE_URL sbagliata), lo stampo chiaramente
+    // ma NON fermo il server: per ora le rotte users/quizz funzionano comunque senza database
+    console.error("Impossibile connettersi al database:", errore.message);
+  }
 
   // Accendo il server: da qui resta "in ascolto" di richieste finché non lo fermo
   app.listen(PORT, () => {

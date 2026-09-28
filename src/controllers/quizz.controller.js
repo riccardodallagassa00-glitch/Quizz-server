@@ -4,7 +4,7 @@ let quizzes = [
     id: 1,
     domanda: "Qual è la capitale d'Italia?",
     risposte: ["Milano", "Roma", "Napoli", "Torino"],
-    rispostaCorretta: 1, // indice dentro l'array "risposte": 1 corrisponde a "Roma"
+    rispostaCorretta: 2, // indice dentro l'array "risposte": 2 corrisponde a "Roma"
   },
 ];
 

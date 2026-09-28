@@ -1,3 +1,6 @@
+// Importo la funzione che controlla in modo rigoroso gli id ricevuti dall'indirizzo (vedi src/utils/parseId.js)
+const parseId = require("../utils/parseId.js");
+
 // Array che funge da "database" temporaneo: i dati vivono solo finché il server resta acceso
 let users = [
   { id: 1, nome: "Mario Rossi", email: "mario.rossi@example.com" },
@@ -44,23 +47,19 @@ function getUsers(req, res) {
 // Funzione chiamata quando arriva una richiesta GET /api/user/:id (singolare, un solo utente)
 function getUser(req, res) {
   // req.params contiene i parametri presenti nell'indirizzo (l'id nella rotta /user/:id)
-  // parseInt converte il testo (es. "3") in un numero vero (3), perché nell'array l'id è un numero
-  const id = req.params.id;
+  // parseId lo converte in numero solo se è fatto esclusivamente da cifre, altrimenti restituisce null
+  // (es. "3" -> 3, ma "1abc" -> null: così un id malformato non viene scambiato per l'id 1)
+  const id = parseId(req.params.id);
 
-  if (!id.trim()) {
-    return res.status(400).json({ errore: "ID mancante nella richiesta" });
-  }
-
-  console.log("ID ricevuto:", typeof id);
-
-  if (typeof Number(id) !== "number") {
+  // se l'id non è valido, rispondo subito con errore 400 = richiesta sbagliata da parte del client
+  if (id === null) {
     return res
       .status(400)
-      .json({ errore: "ID non valido. Deve essere un numero." });
+      .json({ errore: "ID non valido: deve essere un numero intero positivo" });
   }
 
-  // cerco nell'array l'utente con quell'id
-  const user = users.find((u) => u.id == id);
+  // cerco nell'array l'utente con quell'id (=== confronta valore e tipo: qui sono entrambi numeri)
+  const user = users.find((u) => u.id === id);
 
   // se find() non trova nulla, restituisce undefined: qui lo controllo
   if (!user) {
@@ -95,9 +94,14 @@ function createUser(req, res) {
 
 // Funzione chiamata quando arriva una richiesta PUT /api/user/:id
 function updateUser(req, res) {
-  // req.params contiene i parametri presenti nell'indirizzo (l'id nella rotta /user/:id)
-  // parseInt converte il testo (es. "3") in un numero vero (3), perché nell'array l'id è un numero
-  const id = parseInt(req.params.id, 10);
+  // controllo l'id come in getUser: solo cifre, altrimenti null e risposta 400
+  const id = parseId(req.params.id);
+
+  if (id === null) {
+    return res
+      .status(400)
+      .json({ errore: "ID non valido: deve essere un numero intero positivo" });
+  }
 
   // cerco nell'array l'utente con quell'id; find() restituisce il primo elemento che rispetta la condizione
   const user = users.find((u) => u.id === id);
@@ -121,8 +125,14 @@ function updateUser(req, res) {
 
 // Funzione chiamata quando arriva una richiesta DELETE /api/user/:id
 function deleteUser(req, res) {
-  // leggo l'id dall'indirizzo, come nella funzione precedente
-  const id = parseInt(req.params.id, 10);
+  // controllo l'id come nelle funzioni precedenti: solo cifre, altrimenti null e risposta 400
+  const id = parseId(req.params.id);
+
+  if (id === null) {
+    return res
+      .status(400)
+      .json({ errore: "ID non valido: deve essere un numero intero positivo" });
+  }
 
   // findIndex() restituisce la posizione (indice) dell'elemento nell'array, oppure -1 se non lo trova
   const index = users.findIndex((u) => u.id === id);
@@ -139,5 +149,5 @@ function deleteUser(req, res) {
   res.json({ messaggio: "Utente eliminato", utente: rimosso });
 }
 
-// Esporto le 4 funzioni così il file delle rotte (users.routes.js) può usarle
+// Esporto le 5 funzioni così il file delle rotte (users.routes.js) può usarle
 module.exports = { getUsers, getUser, createUser, updateUser, deleteUser };

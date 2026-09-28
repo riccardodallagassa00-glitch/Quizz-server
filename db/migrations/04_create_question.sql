@@ -1,0 +1,5 @@
+CREATE TABLE question (
+  id      SERIAL PRIMARY KEY,
+  quiz_id INTEGER NOT NULL REFERENCES quiz(id) ON DELETE CASCADE,
+  text    TEXT NOT NULL
+);
