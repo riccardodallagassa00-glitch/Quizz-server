@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node main.js",
     "dev": "node --watch main.js",
-    "migrate": "node db/migrate.js",
-    "seed": "node db/seed.js"
+    "migrate": "node src/migrations/migrate.js",
+    "seed": "node src/seeds/seed.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

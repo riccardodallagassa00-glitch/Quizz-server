@@ -1,7 +1,7 @@
 // Esegue in ordine gli script .sql della cartella db/migrations, saltando quelli già eseguiti
 const fs = require("fs");
 const path = require("path");
-const pool = require("../src/config/db.js");
+const pool = require("../config/db.js");
 
 async function migrate() {
   // prendo UNA connessione dal pool: mi serve per eseguire BEGIN/COMMIT sulla stessa connessione
