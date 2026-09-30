@@ -51,4 +51,78 @@ async function remove(id) {
   return rows[0];
 }
 
-module.exports = { getAll, getById, create, update, remove };
+// --- Aggiunte per il TASK 4 ---
+
+// Il quiz "completo", pronto per il giocatore: quiz + le sue domande + le opzioni di risposta,
+// MA SENZA MAI is_correct (le query selezionano solo le colonne che possono uscire dal server)
+async function getFullById(id) {
+  const quiz = await getById(id);
+  if (!quiz) return undefined;
+
+  const { rows: questions } = await pool.query(
+    "SELECT id, text FROM question WHERE quiz_id = $1 ORDER BY id",
+    [id],
+  );
+
+  for (const domanda of questions) {
+    const { rows: answers } = await pool.query(
+      "SELECT id, text FROM answer WHERE question_id = $1 ORDER BY id",
+      [domanda.id],
+    );
+    domanda.answers = answers;
+  }
+
+  return { ...quiz, questions };
+}
+
+// Crea quiz + domande + risposte in un'unica operazione ATOMICA: o va tutto a buon fine,
+// o non viene salvato nulla (transazione BEGIN/COMMIT/ROLLBACK, come richiesto dal documento)
+async function createFull({ title, category_id, questions }) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const quizResult = await client.query(
+      "INSERT INTO quiz (title, category_id) VALUES ($1, $2) RETURNING id, title, category_id",
+      [title, category_id],
+    );
+    const quiz = quizResult.rows[0];
+    quiz.questions = [];
+
+    for (const q of questions) {
+      const questionResult = await client.query(
+        "INSERT INTO question (quiz_id, text) VALUES ($1, $2) RETURNING id, text",
+        [quiz.id, q.text],
+      );
+      const domanda = questionResult.rows[0];
+      domanda.answers = [];
+
+      for (const a of q.answers) {
+        const answerResult = await client.query(
+          "INSERT INTO answer (question_id, text, is_correct) VALUES ($1, $2, $3) RETURNING id, text, is_correct",
+          [domanda.id, a.text, a.is_correct],
+        );
+        domanda.answers.push(answerResult.rows[0]);
+      }
+      quiz.questions.push(domanda);
+    }
+
+    await client.query("COMMIT");
+    return quiz;
+  } catch (errore) {
+    await client.query("ROLLBACK"); // annullo tutto: niente quiz "a metà" nel database
+    throw errore;
+  } finally {
+    client.release();
+  }
+}
+
+module.exports = {
+  getAll,
+  getById,
+  create,
+  update,
+  remove,
+  getFullById,
+  createFull,
+};

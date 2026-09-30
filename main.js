@@ -5,13 +5,15 @@ const express = require("express");
 const usersRoutes = require("./src/routes/users.routes.js");
 
 // Importo il router con tutte le rotte relative ai quiz
-const quizzRoutes = require("./src/routes/quizz.routes.js");
+const quizRoutes = require("./src/routes/quiz.routes.js");
+const questionRoutes = require("./src/routes/question.routes.js");
 const authRoutes = require("./src/routes/auth.routes.js");
+const categoryRoutes = require("./src/routes/category.routes.js");
 
 const dotenv = require("dotenv");
 const result = dotenv.config();
 
-// Importo la connessione al database configurata in src/config/database.js
+// Importo la connessione al database configurata in src/config/db.js
 const pool = require("./src/config/db.js");
 
 // Racchiudo tutta la logica di avvio dentro una funzione chiamata "main"
@@ -36,10 +38,14 @@ async function main() {
   app.use("/api", usersRoutes);
 
   // Collego (monto) le rotte dei quiz: tutte inizieranno con /api (es. /api/quizz)
-  app.use("/api", quizzRoutes);
+  app.use("/api", quizRoutes);
+  // Collego (monto) le rotte delle domande: tutte inizieranno con /api (es. /api/questions)
+  app.use("/api", questionRoutes);
 
   // Collego (monto) le rotte di autenticazione: tutte inizieranno con /api (es. /api/auth/register)
   app.use("/api", authRoutes);
+  // Collego (monto) le rotte delle categorie: tutte inizieranno con /api (es. /api/category)
+  app.use("/api", categoryRoutes);
 
   // Middleware "catch-all": gestisce ogni richiesta che non ha trovato nessuna rotta corrispondente sopra
   app.use((req, res) => {
