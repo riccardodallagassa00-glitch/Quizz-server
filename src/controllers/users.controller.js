@@ -1,100 +1,87 @@
 // Importo la funzione che controlla in modo rigoroso gli id ricevuti dall'indirizzo (vedi src/utils/parseId.js)
 const parseId = require("../utils/parseId.js");
-
-// Array che funge da "database" temporaneo: i dati vivono solo finché il server resta acceso
-let users = [
-  { id: 1, nome: "Mario Rossi", email: "mario.rossi@example.com" },
-  { id: 2, nome: "Luca Bianchi", email: "luca.bianchi@example.com" },
-  { id: 3, nome: "Anna Verdi", email: "anna.verdi@example.com" },
-  { id: 4, nome: "Giulia Neri", email: "giulia.neri@example.com" },
-  { id: 5, nome: "Marco Ferrari", email: "marco.ferrari@example.com" },
-];
-
-// Contatore per assegnare un id sempre nuovo e diverso a ogni utente creato
-let prossimoId = 6;
+const userRepositories = require("../repositories/userRepositories.js");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 
 // Funzione chiamata quando arriva una richiesta GET /api/users
-//due query param: ?name=...e?limit=...
-function getUsers(req, res) {
-  // req = "request", contiene i dati della richiesta in arrivo
-  // res = "response", è l'oggetto che uso per rispondere al client
-  // req.query contiene tutti i parametri scritti dopo il "?" nell'indirizzo
+// Due query param opzionali: ?name=...e ?limit=...
+async function getUsers(req, res) {
   const { name, limit } = req.query;
 
-  // parto da tutti gli utenti, poi restringo via via in base ai filtri ricevuti
-  let risultato = users;
-
-  // se il client ha passato ?name=qualcosa, filtro solo gli utenti il cui nome lo contiene
-  if (name) {
-    // toLowerCase() rende il confronto insensibile a maiuscole/minuscole (es. "mario" trova anche "Mario")
-    // includes() controlla se la stringa "contiene" il testo cercato, non serve corrispondenza esatta
-    risultato = risultato.filter((u) =>
-      u.nome.toLowerCase().includes(name.toLowerCase()),
-    );
+  try {
+    // il filtro e il limite li applica direttamente la query SQL, non più un array in memoria
+    const risultato = await userRepositories.getAll({
+      name: name || null,
+      // i query param arrivano sempre come testo: converto in numero solo se è stato passato
+      limit: limit ? parseInt(limit, 10) : null,
+    });
+    res.json(risultato);
+  } catch (errore) {
+    console.error("Errore in getUsers:", errore.message);
+    res.status(500).json({ errore: "Errore interno del server" });
   }
-
-  // se il client ha passato ?limit=numero, taglio il risultato a quel numero massimo di elementi
-  if (limit) {
-    // i query param arrivano sempre come testo, quindi li converto in numero
-    const limiteNumero = parseInt(limit, 10);
-    // slice(0, N) restituisce solo i primi N elementi dell'array, senza modificare l'array originale
-    risultato = risultato.slice(0, limiteNumero);
-  }
-
-  res.json(risultato);
 }
 
 // Funzione chiamata quando arriva una richiesta GET /api/user/:id (singolare, un solo utente)
-function getUser(req, res) {
-  // req.params contiene i parametri presenti nell'indirizzo (l'id nella rotta /user/:id)
-  // parseId lo converte in numero solo se è fatto esclusivamente da cifre, altrimenti restituisce null
-  // (es. "3" -> 3, ma "1abc" -> null: così un id malformato non viene scambiato per l'id 1)
+async function getUser(req, res) {
   const id = parseId(req.params.id);
 
-  // se l'id non è valido, rispondo subito con errore 400 = richiesta sbagliata da parte del client
   if (id === null) {
     return res
       .status(400)
       .json({ errore: "ID non valido: deve essere un numero intero positivo" });
   }
 
-  // cerco nell'array l'utente con quell'id (=== confronta valore e tipo: qui sono entrambi numeri)
-  const user = users.find((u) => u.id === id);
+  try {
+    const user = await userRepositories.getById(id);
 
-  // se find() non trova nulla, restituisce undefined: qui lo controllo
-  if (!user) {
-    // status 404 = "Not Found", l'utente cercato non esiste
-    return res.status(404).json({ errore: "Utente non trovato" });
+    if (!user) {
+      return res.status(404).json({ errore: "Utente non trovato" });
+    }
+    res.json(user);
+  } catch (errore) {
+    console.error("Errore in getUser:", errore.message);
+    res.status(500).json({ errore: "Errore interno del server" });
   }
-  res.json(user); // rispondo con l'utente trovato, convertito automaticamente in JSON
 }
 
 // Funzione chiamata quando arriva una richiesta POST /api/user
-function createUser(req, res) {
-  // estraggo "nome" ed "email" dal corpo (body) della richiesta inviata dal client
-  const { nome, email } = req.body;
+async function createUser(req, res) {
+  const { username, email, password } = req.body;
 
-  // controllo: se manca nome oppure email, non procedo e rispondo con errore
-  if (!nome || !email) {
-    // status 400 = "Bad Request", cioè il client ha mandato dati non validi
+  if (!username || !email || !password) {
     return res.status(400).json({
-      errore: "Dati non validi. Servono: nome (string), email (string)",
+      errore:
+        "Dati non validi. Servono: username (string), email (string), password (string)",
     });
   }
 
-  // creo l'oggetto del nuovo utente, assegnando l'id corrente e poi incrementandolo (++) per il prossimo
-  const nuovoUser = { id: prossimoId++, nome, email };
+  const hashedPassword = await bcrypt.hash(password, saltRounds);
+  const nuovoUser = { username, email, password: hashedPassword };
 
-  // aggiungo il nuovo utente in fondo all'array
-  users.push(nuovoUser);
-
-  // status 201 = "Created", indica che qualcosa è stato creato con successo
-  res.status(201).json(nuovoUser); // rispondo con l'utente appena creato
+  try {
+    const createdUser = await userRepositories.create(nuovoUser);
+    res.status(201).json(createdUser);
+  } catch (errore) {
+    // codice 23505 = PostgreSQL segnala una violazione di UNIQUE: username o email già esistenti
+    if (errore.code === "23505") {
+      return res
+        .status(409)
+        .json({ errore: "Username o email già registrati" });
+    }
+    if (errore.code === "23502") {
+      return res
+        .status(400)
+        .json({ errore: `Campo obbligatorio mancante: ${errore.column}` });
+    }
+    console.error("Errore in createUser:", errore.message);
+    res.status(500).json({ errore: "Errore interno del server" });
+  }
 }
 
 // Funzione chiamata quando arriva una richiesta PUT /api/user/:id
-function updateUser(req, res) {
-  // controllo l'id come in getUser: solo cifre, altrimenti null e risposta 400
+async function updateUser(req, res) {
   const id = parseId(req.params.id);
 
   if (id === null) {
@@ -103,29 +90,38 @@ function updateUser(req, res) {
       .json({ errore: "ID non valido: deve essere un numero intero positivo" });
   }
 
-  // cerco nell'array l'utente con quell'id; find() restituisce il primo elemento che rispetta la condizione
-  const user = users.find((u) => u.id === id);
+  const { username, email, password } = req.body;
 
-  // se find() non trova nulla, restituisce undefined: qui lo controllo
-  if (!user) {
-    // status 404 = "Not Found", l'utente cercato non esiste
-    return res.status(404).json({ errore: "Utente non trovato" });
+  try {
+    // se il client manda una nuova password, la cifro PRIMA di passarla al repository:
+    // nel database non deve mai finire in chiaro, nemmeno in un update
+    const hashedPassword = password
+      ? await bcrypt.hash(password, saltRounds)
+      : null;
+
+    const user = await userRepositories.update(id, {
+      username: username || null,
+      email: email || null,
+      password: hashedPassword,
+    });
+
+    if (!user) {
+      return res.status(404).json({ errore: "Utente non trovato" });
+    }
+    res.json(user);
+  } catch (errore) {
+    if (errore.code === "23505") {
+      return res
+        .status(409)
+        .json({ errore: "Username o email già in uso da un altro utente" });
+    }
+    console.error("Errore in updateUser:", errore.message);
+    res.status(500).json({ errore: "Errore interno del server" });
   }
-
-  // estraggo i nuovi valori (eventualmente) inviati dal client
-  const { nome, email } = req.body;
-
-  // aggiorno solo i campi effettivamente inviati (se nome è vuoto/non inviato, non lo tocco)
-  if (nome) user.nome = nome;
-  if (email) user.email = email;
-
-  // rispondo con l'utente aggiornato
-  res.json(user);
 }
 
 // Funzione chiamata quando arriva una richiesta DELETE /api/user/:id
-function deleteUser(req, res) {
-  // controllo l'id come nelle funzioni precedenti: solo cifre, altrimenti null e risposta 400
+async function deleteUser(req, res) {
   const id = parseId(req.params.id);
 
   if (id === null) {
@@ -134,19 +130,17 @@ function deleteUser(req, res) {
       .json({ errore: "ID non valido: deve essere un numero intero positivo" });
   }
 
-  // findIndex() restituisce la posizione (indice) dell'elemento nell'array, oppure -1 se non lo trova
-  const index = users.findIndex((u) => u.id === id);
+  try {
+    const rimosso = await userRepositories.remove(id);
 
-  // se non trovato, rispondo con errore 404
-  if (index === -1) {
-    return res.status(404).json({ errore: "Utente non trovato" });
+    if (!rimosso) {
+      return res.status(404).json({ errore: "Utente non trovato" });
+    }
+    res.json({ messaggio: "Utente eliminato", utente: rimosso });
+  } catch (errore) {
+    console.error("Errore in deleteUser:", errore.message);
+    res.status(500).json({ errore: "Errore interno del server" });
   }
-
-  // splice(index, 1) rimuove 1 elemento a partire da quella posizione, e restituisce un array con l'elemento rimosso
-  const [rimosso] = users.splice(index, 1); // prendo il primo (e unico) elemento rimosso con la destrutturazione
-
-  // confermo l'eliminazione, mostrando anche i dati dell'utente eliminato
-  res.json({ messaggio: "Utente eliminato", utente: rimosso });
 }
 
 // Esporto le 5 funzioni così il file delle rotte (users.routes.js) può usarle

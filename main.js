@@ -6,6 +6,7 @@ const usersRoutes = require("./src/routes/users.routes.js");
 
 // Importo il router con tutte le rotte relative ai quiz
 const quizzRoutes = require("./src/routes/quizz.routes.js");
+const authRoutes = require("./src/routes/auth.routes.js");
 
 const dotenv = require("dotenv");
 const result = dotenv.config();
@@ -36,6 +37,9 @@ async function main() {
 
   // Collego (monto) le rotte dei quiz: tutte inizieranno con /api (es. /api/quizz)
   app.use("/api", quizzRoutes);
+
+  // Collego (monto) le rotte di autenticazione: tutte inizieranno con /api (es. /api/auth/register)
+  app.use("/api", authRoutes);
 
   // Middleware "catch-all": gestisce ogni richiesta che non ha trovato nessuna rotta corrispondente sopra
   app.use((req, res) => {
