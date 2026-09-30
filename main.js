@@ -9,6 +9,7 @@ const quizRoutes = require("./src/routes/quiz.routes.js");
 const questionRoutes = require("./src/routes/question.routes.js");
 const authRoutes = require("./src/routes/auth.routes.js");
 const categoryRoutes = require("./src/routes/category.routes.js");
+const gameRoutes = require("./src/routes/game.routes.js");
 
 const dotenv = require("dotenv");
 const result = dotenv.config();
@@ -46,6 +47,8 @@ async function main() {
   app.use("/api", authRoutes);
   // Collego (monto) le rotte delle categorie: tutte inizieranno con /api (es. /api/category)
   app.use("/api", categoryRoutes);
+  // Collego (monto) le rotte dei giochi: tutte inizieranno con /api (es. /api/games)
+  app.use("/api", gameRoutes);
 
   // Middleware "catch-all": gestisce ogni richiesta che non ha trovato nessuna rotta corrispondente sopra
   app.use((req, res) => {
