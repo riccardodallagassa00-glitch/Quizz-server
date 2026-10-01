@@ -41,5 +41,42 @@ async function remove(id) {
   );
   return rows[0];
 }
+// Classifica DI UNA SINGOLA CATEGORIA: per ogni utente, il suo MIGLIOR punteggio in quella categoria
+// (non la somma: se uno ha giocato 5 volte, conta il tentativo migliore, non la somma di tutti)
+async function getLeaderboardByCategory(categoryId, limit = 10) {
+  const { rows } = await pool.query(
+    `SELECT u.username, MAX(s.score_obtained) AS best_score, MAX(s.max_score) AS max_score
+     FROM score s
+     JOIN users u ON u.id = s.user_id
+     WHERE s.category_id = $1
+     GROUP BY u.username
+     ORDER BY best_score DESC
+     LIMIT $2`,
+    [categoryId, limit],
+  );
+  return rows;
+}
 
-module.exports = { getById, getByUserId, create, remove };
+// Classifica GENERALE (nessun filtro per categoria): somma di TUTTI i punteggi di ogni utente,
+// su tutte le categorie in cui ha giocato, più quante partite ha fatto in totale
+async function getOverallLeaderboard(limit = 10) {
+  const { rows } = await pool.query(
+    `SELECT u.username, SUM(s.score_obtained) AS total_score, COUNT(*) AS partite_giocate
+     FROM score s
+     JOIN users u ON u.id = s.user_id
+     GROUP BY u.id, u.username
+     ORDER BY total_score DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return rows;
+}
+
+module.exports = {
+  getById,
+  getByUserId,
+  create,
+  remove,
+  getLeaderboardByCategory,
+  getOverallLeaderboard,
+};

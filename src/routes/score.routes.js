@@ -6,5 +6,6 @@ const router = Router();
 
 // GET /scores/me -> storico delle partite dell'utente loggato (richiede autenticazione)
 router.get("/scores/me", authMiddleware, scoreController.getMyScores);
+router.get("/scores/leaderboard", scoreController.getLeaderboard);
 
 module.exports = router;
