@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const authController = require("../controllers/auth.controller.js");
-
+const rateLimiter = require("../middlewares/rateLimiter.js");
 const router = Router();
 
 router.post("/auth/register", authController.register);
