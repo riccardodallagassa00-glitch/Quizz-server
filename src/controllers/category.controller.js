@@ -1,116 +1,87 @@
-// Logica delle rotte /api/categories. Le query sono in src/repositories/categoryRepositories.js.
 const categoryRepositories = require("../repositories/categoryRepositories.js");
 const parseId = require("../utils/parseId.js");
+const AppError = require("../utils/AppError.js");
 
-// GET /api/categories
-async function getCategories(req, res) {
+async function getCategories(req, res, next) {
   try {
     const categorie = await categoryRepositories.getAll();
     res.json(categorie);
   } catch (errore) {
-    console.error("Errore in getCategories:", errore.message);
-    res.status(500).json({ errore: "Errore interno del server" });
+    next(errore);
   }
 }
 
-// GET /api/categories/:id
-async function getCategory(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res
-      .status(400)
-      .json({ errore: "ID non valido: deve essere un numero intero positivo" });
-  }
-
+async function getCategory(req, res, next) {
   try {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      throw new AppError(
+        400,
+        "ID non valido: deve essere un numero intero positivo",
+      );
+    }
     const categoria = await categoryRepositories.getById(id);
     if (!categoria) {
-      return res.status(404).json({ errore: "Categoria non trovata" });
+      throw new AppError(404, "Categoria non trovata");
     }
     res.json(categoria);
   } catch (errore) {
-    console.error("Errore in getCategory:", errore.message);
-    res.status(500).json({ errore: "Errore interno del server" });
+    next(errore);
   }
 }
 
-// POST /api/categories
-async function createCategory(req, res) {
-  const { name } = req.body;
-
-  // "obbligatorio": deve esserci ed essere una stringa non vuota (dopo aver tolto gli spazi)
-  if (!name || typeof name !== "string" || !name.trim()) {
-    return res
-      .status(400)
-      .json({ errore: "Il nome della categoria è obbligatorio" });
-  }
-
+async function createCategory(req, res, next) {
   try {
+    const { name } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      throw new AppError(400, "Il nome della categoria è obbligatorio");
+    }
     const nuovaCategoria = await categoryRepositories.create(name.trim());
     res.status(201).json(nuovaCategoria);
   } catch (errore) {
-    // "univoco": il vincolo UNIQUE nello schema SQL blocca i doppioni; qui intercettiamo l'errore
-    if (errore.code === "23505") {
-      return res
-        .status(409)
-        .json({ errore: "Esiste già una categoria con questo nome" });
-    }
-    console.error("Errore in createCategory:", errore.message);
-    res.status(500).json({ errore: "Errore interno del server" });
+    next(errore);
   }
 }
 
-// PUT /api/categories/:id
-async function updateCategory(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res
-      .status(400)
-      .json({ errore: "ID non valido: deve essere un numero intero positivo" });
-  }
-
-  const { name } = req.body;
-  if (!name || typeof name !== "string" || !name.trim()) {
-    return res
-      .status(400)
-      .json({ errore: "Il nome della categoria è obbligatorio" });
-  }
-
+async function updateCategory(req, res, next) {
   try {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      throw new AppError(
+        400,
+        "ID non valido: deve essere un numero intero positivo",
+      );
+    }
+    const { name } = req.body;
+    if (!name || typeof name !== "string" || !name.trim()) {
+      throw new AppError(400, "Il nome della categoria è obbligatorio");
+    }
     const categoria = await categoryRepositories.update(id, name.trim());
     if (!categoria) {
-      return res.status(404).json({ errore: "Categoria non trovata" });
+      throw new AppError(404, "Categoria non trovata");
     }
     res.json(categoria);
   } catch (errore) {
-    if (errore.code === "23505") {
-      return res
-        .status(409)
-        .json({ errore: "Esiste già una categoria con questo nome" });
-    }
-    console.error("Errore in updateCategory:", errore.message);
-    res.status(500).json({ errore: "Errore interno del server" });
+    next(errore);
   }
 }
 
-// DELETE /api/categories/:id
-async function deleteCategory(req, res) {
-  const id = parseId(req.params.id);
-  if (id === null) {
-    return res
-      .status(400)
-      .json({ errore: "ID non valido: deve essere un numero intero positivo" });
-  }
-
+async function deleteCategory(req, res, next) {
   try {
+    const id = parseId(req.params.id);
+    if (id === null) {
+      throw new AppError(
+        400,
+        "ID non valido: deve essere un numero intero positivo",
+      );
+    }
     const rimossa = await categoryRepositories.remove(id);
     if (!rimossa) {
-      return res.status(404).json({ errore: "Categoria non trovata" });
+      throw new AppError(404, "Categoria non trovata");
     }
     res.json({ messaggio: "Categoria eliminata", categoria: rimossa });
   } catch (errore) {
-    console.error("Errore in deleteCategory:", errore.message);
-    res.status(500).json({ errore: "Errore interno del server" });
+    next(errore);
   }
 }
 

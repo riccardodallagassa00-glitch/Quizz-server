@@ -17,6 +17,8 @@ const result = dotenv.config();
 
 // Importo la connessione al database configurata in src/config/db.js
 const pool = require("./src/config/db.js");
+const notFound = require("./src/middlewares/notFound.js");
+const errorHandler = require("./src/middlewares/errorHandler.js");
 
 // Racchiudo tutta la logica di avvio dentro una funzione chiamata "main"
 // Diventa "async" perché al suo interno useremo "await" per aspettare la connessione al database
@@ -54,9 +56,10 @@ async function main() {
   app.use("/api", scoreRoutes);
 
   // Middleware "catch-all": gestisce ogni richiesta che non ha trovato nessuna rotta corrispondente sopra
-  app.use((req, res) => {
-    res.status(404).json({ errore: "Rotta non trovata" });
-  });
+  app.use(notFound);
+
+  // Middleware centralizzato di gestione errori: DEVE stare per ultimo, dopo ogni altro app.use
+  app.use(errorHandler);
 
   try {
     // Provo una query banalissima per verificare che il database risponda
