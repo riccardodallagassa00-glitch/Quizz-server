@@ -1,3 +1,6 @@
+//swagger documentation
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./src/config/swagger.js");
 // Importo Express, la libreria che uso per creare il server
 const express = require("express");
 
@@ -37,7 +40,7 @@ function createApp() {
   app.use("/api", categoryRoutes);
   app.use("/api", gameRoutes);
   app.use("/api", scoreRoutes);
-
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
   app.use(notFound);
   app.use(errorHandler);
 
